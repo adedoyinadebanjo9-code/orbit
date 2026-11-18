@@ -32,6 +32,7 @@ dialog::backdrop{background:#0008}
 .mut{color:var(--mut)}code{display:block;background:var(--bg);padding:10px;border-radius:10px;word-break:break-all;margin:8px 0;font-size:12px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
 #toast.show{opacity:1}#toast.bad{background:var(--bad);color:#fff}
+dialog.wide{width:min(820px,96vw);max-height:92vh;overflow:auto}dialog h4{margin:22px 0 4px}.vt input{min-width:84px;padding:8px}.vt input[type=checkbox]{min-width:20px}.pics{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.ph{width:110px}.ph img{width:110px;height:110px;object-fit:cover;border-radius:10px;display:block}.ph input{margin:6px 0}
 </style></head><body>
 <div id="root"></div><dialog id="dlg"></dialog><div id="toast" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -101,8 +102,9 @@ async function list(v){
  if(error)return toast(error.message,1);
  const cols=c.f.filter(f=>f.type!="textarea");
  $("#main").innerHTML=`<div class="bar"><b>${esc(c.title)}</b><button id="add">Add</button></div><div class="sc"><table><tr>${cols.map(f=>`<th>${esc(f.l||f.k)}</th>`).join("")}<th></th></tr>${data.map((r,i)=>`<tr>${cols.map(f=>`<td>${cell(f,r[f.k])}</td>`).join("")}<td><button class="ghost" data-e="${i}">Edit</button></td></tr>`).join("")||`<tr><td class="mut">Nothing here yet. Tap Add to create the first one.</td></tr>`}</table></div>`;
- $("#add").onclick=()=>form(v,null);
- $("#main").querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>form(v,data[b.dataset.e]))
+ const open=r=>v=="products"?editor(r):form(v,r);
+ $("#add").onclick=()=>open(null);
+ $("#main").querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>open(data[b.dataset.e]))
 }
 function field(f,row,pk,editing){
  const v=row?row[f.k]:f.d,id="f_"+f.k,l=esc(f.l||f.k),req=f.r?"required":"";
@@ -149,6 +151,90 @@ function form(v,row){
   const{error}=await q;
   error?toast(error.message,1):(d.close(),toast("Saved"),list(v))
  }
+}
+
+async function editor(row){
+ await loadRefs(T.products);
+ const d=$("#dlg");let p=row;
+ d.className="wide";
+ d.onclose=()=>{d.className="";d.onclose=null;d.onclick=d.onsubmit=d.onchange=null;list("products")};
+ async function draw(){
+  let vs=[],ims=[];
+  if(p){
+   const[a,b]=await Promise.all([
+    sb.from("product_variants").select("*").eq("product_id",p.id).order("price_kobo"),
+    sb.from("product_images").select("*").eq("product_id",p.id).order("sort")]);
+   if(a.error||b.error)return toast((a.error||b.error).message,1);
+   vs=a.data;ims=b.data
+  }
+  const vr=v=>`<tr data-v="${v?v.id:""}"><td><input class="vc" value="${esc(v&&v.color)}" placeholder="Colour"></td><td><input class="vs" value="${esc(v&&v.storage)}" placeholder="Storage"></td><td><input class="vp" type="number" min="0" step="0.01" value="${v?v.price_kobo/100:""}" placeholder="Price ₦"></td><td><input class="vk" type="number" min="0" step="1" value="${v?v.stock:0}"></td><td><input class="va" type="checkbox" ${!v||v.active?"checked":""}></td><td><button type="button" class="ghost" data-act="sv">${v?"Save":"Add"}</button>${v?` <button type="button" class="danger" data-act="dv">Delete</button>`:""}</td></tr>`;
+  d.innerHTML=`<form id="pf"><h3 style="margin:0">${p?"Edit":"Add"} product</h3>${T.products.f.map(f=>field(f,p,"id",!!p)).join("")}<div class="acts">${p?`<button type="button" class="danger" data-act="dp">Delete product</button>`:""}<button type="button" class="ghost" data-act="cx">${p?"Close":"Cancel"}</button><button>${p?"Save details":"Create, then add variants and photos"}</button></div></form>`
+  +(p?`<h4>Variants, prices and stock</h4><p class="mut">One row per colour and storage option. Leave colour or storage empty if the product has none. Untick Active to hide a variant without deleting it.</p><div class="sc"><table class="vt"><tr><th>Colour</th><th>Storage</th><th>Price (₦)</th><th>Stock</th><th>Active</th><th></th></tr>${vs.map(vr).join("")}${vr(null)}</table></div>
+  <h4>Photos</h4><p class="mut">JPEG, PNG or WebP, up to 5 MB each. The photo with the lowest number is shown first.</p><div class="pics">${ims.map(i=>`<div class="ph"><img src="${esc(pub(i.path))}" alt=""><input class="so" type="number" step="1" value="${i.sort??0}" data-id="${i.id}" aria-label="Photo order"><button type="button" class="ghost" data-act="di" data-id="${i.id}" data-path="${esc(i.path)}">Remove</button></div>`).join("")}</div><label for="up">Add photos</label><input id="up" type="file" accept="image/jpeg,image/png,image/webp" multiple>`:`<p class="mut">After you create the product you can add its variants, prices, stock and photos here.</p>`);
+  if(!d.open)d.showModal()
+ }
+ d.onsubmit=async e=>{
+  e.preventDefault();
+  const o={name:$("#f_name").value.trim(),category_id:$("#f_category_id").value,description:$("#f_description").value.trim()||null,active:$("#f_active").checked};
+  const{data,error}=await(p?sb.from("products").update(o).eq("id",p.id):sb.from("products").insert(o)).select().single();
+  if(error)return toast(error.message,1);
+  p=data;toast("Saved");draw()
+ };
+ d.onclick=async e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const act=b.dataset.act;
+  if(act=="cx")return d.close();
+  if(act=="dp"){
+   if(!confirm("Delete this product permanently? If it has been ordered, untick Active instead."))return;
+   const{error}=await sb.from("products").delete().eq("id",p.id);
+   return error?toast("Can't delete: "+error.message,1):(toast("Deleted"),d.close())
+  }
+  if(act=="sv"||act=="dv"){
+   const tr=b.closest("tr"),id=tr.dataset.v;
+   if(act=="dv"){
+    if(!confirm("Delete this variant? If it has been ordered, untick Active instead."))return;
+    const{error}=await sb.from("product_variants").delete().eq("id",id);
+    return error?toast("Can't delete: "+error.message,1):(toast("Deleted"),draw())
+   }
+   const price=parseFloat(tr.querySelector(".vp").value);
+   if(isNaN(price)||price<0)return toast("Enter a price",1);
+   const o={product_id:p.id,color:tr.querySelector(".vc").value.trim()||null,storage:tr.querySelector(".vs").value.trim()||null,price_kobo:Math.round(price*100),stock:Math.max(0,Math.trunc(Number(tr.querySelector(".vk").value)||0)),active:tr.querySelector(".va").checked};
+   const{error}=await(id?sb.from("product_variants").update(o).eq("id",id):sb.from("product_variants").insert(o));
+   return error?toast(error.message,1):(toast("Saved"),draw())
+  }
+  if(act=="di"){
+   if(!confirm("Remove this photo?"))return;
+   const{error}=await sb.from("product_images").delete().eq("id",b.dataset.id);
+   if(error)return toast(error.message,1);
+   await sb.storage.from("products").remove([b.dataset.path]);
+   toast("Removed");draw()
+  }
+ };
+ d.onchange=async e=>{
+  const t=e.target;
+  if(t.classList.contains("so")){
+   const{error}=await sb.from("product_images").update({sort:Number(t.value)||0}).eq("id",t.dataset.id);
+   return error?toast(error.message,1):toast("Order saved")
+  }
+  if(t.id=="up"){
+   const files=[...t.files];let n=0;
+   const{data:last}=await sb.from("product_images").select("sort").eq("product_id",p.id).order("sort",{ascending:false}).limit(1);
+   let next=last&&last.length?(last[0].sort||0)+1:0;
+   for(const file of files){
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast(file.name+" is not JPEG, PNG or WebP",1);continue}
+    if(file.size>5*1024*1024){toast(file.name+" is over 5 MB",1);continue}
+    const path=`${p.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+    const up=await sb.storage.from("products").upload(path,file,{contentType:file.type});
+    if(up.error){toast(up.error.message,1);continue}
+    const ins=await sb.from("product_images").insert({product_id:p.id,path,sort:next++});
+    if(ins.error){toast(ins.error.message,1);await sb.storage.from("products").remove([path]);continue}
+    n++
+   }
+   if(n)toast(n+" photo"+(n>1?"s":"")+" added");
+   draw()
+  }
+ };
+ draw()
 }
 
 async function orders(){
