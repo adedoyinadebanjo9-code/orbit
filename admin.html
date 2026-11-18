@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Orbit Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f4f6;--card:#fff;--ink:#111114;--mut:#7d7d87;--line:#e4e4e9;--acc:#5b63f0;--bad:#c62828}
+@media (prefers-color-scheme:dark){:root{--bg:#121214;--card:#1c1c20;--ink:#f4f4f6;--mut:#9a9aa5;--line:#2c2c33}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Poppins,system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+header b{font-size:16px;letter-spacing:.2em}
+nav{display:flex;gap:6px;overflow-x:auto;padding:12px 18px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{border:0;border-radius:20px;padding:8px 16px;background:var(--ink);color:var(--bg);cursor:pointer;white-space:nowrap}
+button.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+button.danger{background:var(--bad);color:#fff}
+nav button{background:var(--card);color:var(--ink);border:1px solid var(--line)}nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{padding:0 18px 40px;max-width:1100px;margin:0 auto}
+.bar{display:flex;justify-content:space-between;align-items:center;margin:6px 0 12px}
+.sc{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:16px}
+table{border-collapse:collapse;width:100%}th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--mut);font-size:12px}tr:last-child td{border-bottom:0}
+td img{width:44px;height:44px;object-fit:cover;border-radius:8px;display:block}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+input[type=checkbox]{width:20px;height:20px}
+label{display:block;margin:12px 0 4px;font-size:12px;color:var(--mut)}
+dialog{border:0;border-radius:22px;padding:22px;width:min(460px,92vw);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:#0008}
+.acts{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.login{max-width:360px;margin:12vh auto;background:var(--card);padding:26px;border-radius:22px;border:1px solid var(--line)}
+.mut{color:var(--mut)}code{display:block;background:var(--bg);padding:10px;border-radius:10px;word-break:break-all;margin:8px 0;font-size:12px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+#toast.show{opacity:1}#toast.bad{background:var(--bad);color:#fff}
+</style></head><body>
+<div id="root"></div><dialog id="dlg"></dialog><div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const sb=supabase.createClient("https://hqfvnldpexjhdkboahhx.supabase.co","sb_publishable_uqt1NYiN7KakyNBKVpl4lA_ncqcnfSC");
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const naira=k=>"₦"+(k/100).toLocaleString("en-US");
+const pub=p=>sb.storage.from("products").getPublicUrl(p).data.publicUrl;
+const STATUS=["pending","paid","packed","shipped","delivered","cancelled"];
+// Every managed table is described once here; the list and form screens are generated from it.
+const T={
+ products:{title:"Products",t:"products",o:"created_at",desc:1,f:[{k:"name",r:1},{k:"category_id",l:"category",type:"ref",ref:"categories",r:1},{k:"description",type:"textarea"},{k:"active",type:"bool",d:1}]},
+ variants:{title:"Variants and stock",t:"product_variants",o:"product_id",f:[{k:"product_id",l:"product",type:"ref",ref:"products",r:1},{k:"color"},{k:"storage"},{k:"price_kobo",l:"price",type:"naira",r:1},{k:"stock",type:"number",r:1,d:0},{k:"active",type:"bool",d:1}]},
+ images:{title:"Product photos",t:"product_images",o:"product_id",f:[{k:"product_id",l:"product",type:"ref",ref:"products",r:1},{k:"path",l:"photo",type:"image"},{k:"sort",type:"number",d:0}]},
+ categories:{title:"Categories",t:"categories",o:"sort",f:[{k:"name",r:1},{k:"slug",r:1},{k:"sort",type:"number",d:0}]},
+ delivery:{title:"Delivery",t:"delivery_options",pk:"code",o:"code",f:[{k:"code",r:1},{k:"label",r:1},{k:"eta_text",l:"timeframe",r:1},{k:"fee_kobo",l:"fee",type:"naira",r:1},{k:"active",type:"bool",d:1}]},
+ promos:{title:"Promo codes",t:"promo_codes",pk:"code",o:"code",f:[{k:"code",r:1,up:1},{k:"percent",type:"number",r:1},{k:"active",type:"bool",d:1},{k:"expires_at",l:"expires",type:"dt"}]},
+ stores:{title:"Stores",t:"stores",o:"name",f:[{k:"name",r:1},{k:"address",r:1},{k:"lat",type:"number"},{k:"lng",type:"number"},{k:"active",type:"bool",d:1}]}
+};
+const TABS=[["orders","Orders"],...Object.entries(T).map(([k,c])=>[k,c.title])];
+let view="orders",refs={};
+
+function toast(m,bad){const t=$("#toast");t.textContent=m;t.className="show"+(bad?" bad":"");clearTimeout(toast.h);toast.h=setTimeout(()=>t.className="",3500)}
+
+async function boot(){
+ const{data:{session}}=await sb.auth.getSession();
+ if(!session)return loginScreen();
+ const{data:ok,error}=await sb.rpc("is_admin");
+ if(error||!ok)return deniedScreen(session.user);
+ shell();go(view)
+}
+function loginScreen(){
+ $("#root").innerHTML=`<form class="login" id="lf"><h2 style="margin-top:0">Orbit admin</h2><label for="em">Email</label><input id="em" type="email" required autocomplete="username"><label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password"><div class="acts"><button>Sign in</button></div></form>`;
+ $("#lf").onsubmit=async e=>{e.preventDefault();const{error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});error?toast(error.message,1):boot()}
+}
+function deniedScreen(u){
+ $("#root").innerHTML=`<div class="login"><h2 style="margin-top:0">No admin access</h2><p class="mut">You’re signed in as ${esc(u.email)}, but this account isn’t an admin yet. Run this once in the Supabase SQL editor:</p><code>insert into public.admins (user_id) values ('${esc(u.id)}');</code><div class="acts"><button class="ghost" id="so">Sign out</button><button id="rt">Retry</button></div></div>`;
+ $("#so").onclick=signOut;$("#rt").onclick=boot
+}
+async function signOut(){await sb.auth.signOut();loginScreen()}
+function shell(){
+ $("#root").innerHTML=`<header><b>ORBIT</b><button class="ghost" id="so">Sign out</button></header><nav id="nv">${TABS.map(([k,l])=>`<button data-v="${k}">${esc(l)}</button>`).join("")}</nav><main id="main"></main>`;
+ $("#so").onclick=signOut;
+ $("#nv").onclick=e=>{const b=e.target.closest("[data-v]");if(b)go(b.dataset.v)}
+}
+function go(v){view=v;document.querySelectorAll("#nv button").forEach(b=>b.classList.toggle("on",b.dataset.v==v));v=="orders"?orders():list(v)}
+
+async function loadRefs(c){
+ for(const f of c.f)if(f.type=="ref"){
+  const{data}=await sb.from(f.ref).select("id,name").order("name");
+  refs[f.ref]=Object.fromEntries((data||[]).map(r=>[r.id,r.name]))
+ }
+}
+function cell(f,v){
+ if(v==null||v==="")return `<span class="mut">–</span>`;
+ if(f.type=="ref")return esc(refs[f.ref]?.[v]??"?");
+ if(f.type=="bool")return v?"✓":"–";
+ if(f.type=="naira")return naira(v);
+ if(f.type=="image")return `<img src="${esc(pub(v))}" alt="">`;
+ if(f.type=="dt")return esc(new Date(v).toLocaleString("en-GB"));
+ return esc(v)
+}
+async function list(v){
+ const c=T[v];await loadRefs(c);
+ const{data,error}=await sb.from(c.t).select("*").order(c.o,{ascending:!c.desc}).limit(500);
+ if(error)return toast(error.message,1);
+ const cols=c.f.filter(f=>f.type!="textarea");
+ $("#main").innerHTML=`<div class="bar"><b>${esc(c.title)}</b><button id="add">Add</button></div><div class="sc"><table><tr>${cols.map(f=>`<th>${esc(f.l||f.k)}</th>`).join("")}<th></th></tr>${data.map((r,i)=>`<tr>${cols.map(f=>`<td>${cell(f,r[f.k])}</td>`).join("")}<td><button class="ghost" data-e="${i}">Edit</button></td></tr>`).join("")||`<tr><td class="mut">Nothing here yet. Tap Add to create the first one.</td></tr>`}</table></div>`;
+ $("#add").onclick=()=>form(v,null);
+ $("#main").querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>form(v,data[b.dataset.e]))
+}
+function field(f,row,pk,editing){
+ const v=row?row[f.k]:f.d,id="f_"+f.k,l=esc(f.l||f.k),req=f.r?"required":"";
+ if(f.type=="bool")return `<label for="${id}">${l}</label><input id="${id}" type="checkbox" ${v?"checked":""}>`;
+ if(f.type=="textarea")return `<label for="${id}">${l}</label><textarea id="${id}" rows="3">${esc(v)}</textarea>`;
+ if(f.type=="ref")return `<label for="${id}">${l}</label><select id="${id}" ${req}><option value="">Choose…</option>${Object.entries(refs[f.ref]||{}).map(([k,n])=>`<option value="${esc(k)}" ${k==v?"selected":""}>${esc(n)}</option>`).join("")}</select>`;
+ if(f.type=="image")return `<label for="${id}">${l}</label>${v?`<img src="${esc(pub(v))}" alt="" style="width:80px;border-radius:10px;display:block;margin-bottom:8px">`:""}<input id="${id}" type="file" accept="image/*" ${row?"":"required"}>`;
+ if(f.type=="naira")return `<label for="${id}">${l} (₦)</label><input id="${id}" type="number" min="0" step="0.01" value="${v==null?"":v/100}" ${req}>`;
+ if(f.type=="number")return `<label for="${id}">${l}</label><input id="${id}" type="number" step="any" value="${esc(v)}" ${req}>`;
+ if(f.type=="dt")return `<label for="${id}">${l}</label><input id="${id}" type="datetime-local" value="${v?new Date(new Date(v)-new Date(v).getTimezoneOffset()*6e4).toISOString().slice(0,16):""}">`;
+ return `<label for="${id}">${l}</label><input id="${id}" value="${esc(v)}" ${req} ${editing&&f.k==pk?"disabled":""}>`
+}
+function form(v,row){
+ const c=T[v],pk=c.pk||"id",d=$("#dlg");
+ d.innerHTML=`<form id="ff"><h3 style="margin:0">${row?"Edit":"Add"} · ${esc(c.title)}</h3>${c.f.map(f=>field(f,row,c.pk,!!row)).join("")}<div class="acts">${row?`<button type="button" class="danger" id="del">Delete</button>`:""}<button type="button" class="ghost" id="cx">Cancel</button><button>Save</button></div></form>`;
+ d.showModal();
+ $("#cx").onclick=()=>d.close();
+ if(row)$("#del").onclick=async()=>{
+  if(!confirm("Delete this permanently?"))return;
+  const{error}=await sb.from(c.t).delete().eq(pk,row[pk]);
+  error?toast(error.message,1):(d.close(),toast("Deleted"),list(v))
+ };
+ $("#ff").onsubmit=async e=>{
+  e.preventDefault();const o={};
+  for(const f of c.f){
+   const el=$("#f_"+f.k);let x=el.value;
+   if(f.type=="bool")x=el.checked;
+   else if(f.type=="image"){
+    const file=el.files[0];if(!file){continue}
+    const pid=$("#f_product_id").value,nm=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    const path=`${pid}/${Date.now()}-${nm}`;
+    const up=await sb.storage.from("products").upload(path,file,{contentType:file.type});
+    if(up.error)return toast(up.error.message,1);x=path
+   }
+   else if(f.type=="naira")x=x===""?null:Math.round(parseFloat(x)*100);
+   else if(f.type=="number")x=x===""?null:Number(x);
+   else if(f.type=="dt")x=x?new Date(x).toISOString():null;
+   else{x=x.trim();if(f.up)x=x.toUpperCase();if(x==="")x=null}
+   if(f.type=="image"&&row==null&&x==null)return toast("Choose a photo first",1);
+   o[f.k]=x
+  }
+  if(row&&c.pk)delete o[c.pk];
+  const q=row?sb.from(c.t).update(o).eq(pk,row[pk]):sb.from(c.t).insert(o);
+  const{error}=await q;
+  error?toast(error.message,1):(d.close(),toast("Saved"),list(v))
+ }
+}
+
+async function orders(){
+ const{data,error}=await sb.from("orders").select("*").order("created_at",{ascending:false}).limit(100);
+ if(error)return toast(error.message,1);
+ $("#main").innerHTML=`<div class="bar"><b>Orders</b><span class="mut">${data.length} latest</span></div><div class="sc"><table><tr><th>Order</th><th>Placed</th><th>Total</th><th>Status</th><th></th></tr>${data.map((r,i)=>`<tr><td>${esc(r.order_no)}</td><td>${esc(new Date(r.created_at).toLocaleString("en-GB"))}</td><td>${naira(r.total_kobo)}</td><td><select data-s="${i}">${STATUS.map(s=>`<option ${s==r.status?"selected":""}>${s}</option>`).join("")}</select></td><td><button class="ghost" data-d="${i}">Details</button></td></tr>`).join("")||`<tr><td class="mut">No orders yet.</td></tr>`}</table></div>`;
+ $("#main").querySelectorAll("[data-s]").forEach(s=>s.onchange=async()=>{
+  const r=data[s.dataset.s],patch={status:s.value};
+  if(s.value=="paid"&&!r.paid_at)patch.paid_at=new Date().toISOString();
+  const{error}=await sb.from("orders").update(patch).eq("id",r.id);
+  error?(toast(error.message,1),orders()):toast("Order "+r.order_no+" is now "+s.value)
+ });
+ $("#main").querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>detail(data[b.dataset.d]))
+}
+async function detail(r){
+ const{data:it,error}=await sb.from("order_items").select("*").eq("order_id",r.id);
+ if(error)return toast(error.message,1);
+ const a=r.address||{},d=$("#dlg");
+ d.innerHTML=`<h3 style="margin:0">${esc(r.order_no)}</h3><p class="mut">${esc(a.label)} · ${esc(a.line1)}, ${esc(a.city)}, ${esc(a.state)}<br>Delivery: ${esc(r.delivery_code)} (${naira(r.delivery_fee_kobo)})${r.paystack_reference?`<br>Paystack ref: ${esc(r.paystack_reference)}`:""}</p><table>${it.map(i=>`<tr><td>${esc(i.name_snapshot)}</td><td>× ${i.qty}</td><td>${naira(i.unit_price_kobo*i.qty)}</td></tr>`).join("")}</table><p>Subtotal ${naira(r.subtotal_kobo)}${r.discount_kobo?` · Discount −${naira(r.discount_kobo)}`:""}<br><b>Total ${naira(r.total_kobo)}</b></p><div class="acts"><button id="cx">Close</button></div>`;
+ d.showModal();$("#cx").onclick=()=>d.close()
+}
+sb.auth.onAuthStateChange(ev=>{if(ev=="SIGNED_OUT")loginScreen()});
+boot();
+</script></body></html>

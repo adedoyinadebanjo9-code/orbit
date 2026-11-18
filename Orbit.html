@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbit</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f4f6;--card:#fff;--ink:#111114;--mut:#8a8a93;--line:#e6e6ea;--acc:#5b63f0;--grn:#1f9d55;--shell:#c9ccd6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121214;--card:#1c1c20;--ink:#f4f4f6;--mut:#8f8f99;--line:#2a2a30;--shell:#0a0a0c}}
+html{height:100%}*{box-sizing:border-box;margin:0}
+body{height:100%;background:var(--shell);font-family:Poppins,system-ui,sans-serif;color:var(--ink);display:flex;justify-content:center}
+#app{position:relative;width:100%;max-width:420px;height:100%;background:var(--bg);overflow:hidden}
+.scr{height:100%;overflow-y:auto;padding:18px 18px 110px}
+.full{padding:0}
+h1{font-size:28px;font-weight:600;letter-spacing:-.02em}
+.sub{font-size:12px;color:var(--mut)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;border-radius:30px;border:0;background:var(--ink);color:var(--bg);font:500 15px Poppins;cursor:pointer}
+.btn.lt{background:#fff;color:#111}
+.ic{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer;font-size:15px;flex:none;color:var(--ink)}
+.ic.dk{background:var(--ink);color:var(--bg);border:0}
+.in{display:flex;align-items:center;gap:10px;height:54px;padding:0 16px;border:1px solid var(--line);border-radius:18px;background:var(--card);margin-bottom:12px;font-size:14px}
+.in input{border:0;background:none;flex:1;font:inherit;color:inherit;outline:0}
+.tile{position:relative;border-radius:22px;overflow:hidden;color:#fff;display:flex;align-items:flex-end;padding:12px}
+.tile b{font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.masonry{columns:2;column-gap:12px}.masonry>div{break-inside:avoid;margin-bottom:14px}
+.pill{padding:9px 16px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:13px;white-space:nowrap;cursor:pointer}
+.pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:14px 0}
+.heart{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;background:#fffd;color:#111;display:grid;place-items:center;font-size:14px;border:0;cursor:pointer}
+.heart.on{color:#e11d48}
+.nm{font-size:13px;font-weight:500;margin-top:6px}.pr{font-size:12px;color:var(--mut)}
+.nav{position:absolute;left:18px;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));height:62px;border-radius:32px;background:#111114;display:flex;justify-content:space-around;align-items:center;box-shadow:0 10px 30px #0005}
+.nav button{width:46px;height:46px;border-radius:50%;border:0;background:none;color:#fff;font-size:18px;cursor:pointer;position:relative}
+.nav button.on{background:#fff;color:#111}
+.nav i{position:absolute;top:4px;right:2px;background:var(--acc);color:#fff;font:600 10px Poppins;border-radius:8px;padding:1px 5px;font-style:normal}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:12px}
+.item{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.thumb{width:70px;height:70px;border-radius:16px;flex:none}
+.qty{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:18px;padding:4px 8px;font-size:13px}
+.qty button{border:0;background:none;color:var(--ink);font-size:16px;cursor:pointer}
+.sum div{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);margin:10px 0}
+.opt{border:1.5px solid var(--line);border-radius:18px;padding:12px;background:var(--card);cursor:pointer;font-size:13px}
+.opt.on{border-color:var(--ink)}
+.lbl{font-size:11px;letter-spacing:.14em;color:var(--mut);margin:18px 0 8px}
+.dots{display:flex;gap:5px;justify-content:center;margin:14px 0}.dots i{width:6px;height:6px;border-radius:3px;background:#8886}.dots i.on{width:22px;background:currentColor}
+.sw{width:36px;height:36px;border-radius:50%;border:2px solid transparent;outline:1px solid var(--line);outline-offset:2px;cursor:pointer}.sw.on{outline:2px solid var(--ink)}
+.menu{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+a{color:inherit}
+</style></head><body><div id="app"></div>
+<script>
+const P=[
+{id:1,n:"iPhone 17 · Orange",p:1450000,c:"iPhone",g:"#f59e42,#7a3b0a"},
+{id:2,n:"iPhone 17 Pro Silver",p:1850000,c:"iPhone",g:"#e5e5ea,#2b2b30"},
+{id:3,n:"AirPods Pro",p:320000,c:"Audio",g:"#3a3a40,#000"},
+{id:4,n:"MacBook Air 15\"",p:1980000,c:"Mac",g:"#4a5a78,#161c28"},
+{id:5,n:"Galaxy S23 Ultra",p:1250000,c:"Galaxy",g:"#ecc9dc,#a67590"},
+{id:6,n:"Pixel 9",p:1100000,c:"Pixel",g:"#9db4d8,#5b4a3a"},
+{id:7,n:"AirPods Max · Pink",p:780000,c:"Audio",g:"#f0a0a0,#b84a4a"},
+{id:8,n:"Galaxy Z Flip",p:980000,c:"Galaxy",g:"#f6c4e0,#d17aa6"},
+{id:9,n:"iPhone 17 Pro · Berry",p:1850000,c:"iPhone",g:"#b0405a,#3a0f1c"},
+{id:10,n:"AirPods 4",p:210000,c:"Audio",g:"#e8eef2,#9aa7b0"}];
+const CATS=[["iPhone",24,"#8fb4ea,#2e5fa8"],["Galaxy",18,"#a8a39c,#3a3a3e"],["Google Pixel",9,"#c9a07a,#5a3d28"],["MacBook",16,"#555b6a,#14171f"],["Headphones",12,"#7f9bb5,#2a3d52"],["Watches",8,"#d8dde4,#2a3a66"]];
+const STORES=[["Orbit Lekki","Admiralty Way, Phase 1","#c8c8cf,#6a6a74"],["Orbit Computer Village","Ikeja, Lagos","#d8cfa8,#4a4a60"],["Orbit Abuja","Wuse 2, Abuja","#d4b8d0,#3a3440"]];
+const S={v:"splash",cart:{2:1,3:1,5:1},saved:new Set([7,8,9,10,4,1]),pid:2,f:"All",stor:"512GB",col:0,ship:"std",pay:"visa",pw:false,ob:0};
+const $=id=>document.getElementById(id);
+const N=n=>"₦"+n.toLocaleString("en-US");
+const g=s=>`linear-gradient(160deg,${s})`;
+const prod=id=>P.find(x=>x.id==id);
+const items=()=>Object.keys(S.cart).filter(k=>S.cart[k]>0);
+const count=()=>items().reduce((a,k)=>a+S.cart[k],0);
+const sub=()=>items().reduce((a,k)=>a+prod(k).p*S.cart[k],0);
+const del=()=>S.ship=="std"?8500:15000;
+const disc=()=>Math.round(sub()*.1);
+const total=()=>sub()+del()-disc();
+const TABS=[["home","⌂"],["cats","▦"],["saved","♡"],["bag","👜"],["me","☺"]];
+const TABV={home:"home",spot:"home",explore:"cats",cats:"cats",saved:"saved",bag:"bag",checkout:"bag",me:"me",stores:"me"};
+const nav=()=>`<div class="nav">${TABS.map(([v,i])=>`<button data-go="${v}" class="${TABV[S.v]==v?"on":""}" aria-label="${v}">${i}${v=="bag"&&count()?`<i>${count()}</i>`:""}</button>`).join("")}</div>`;
+const heart=id=>`<button class="heart ${S.saved.has(id)?"on":""}" data-sv="${id}" aria-label="Save">${S.saved.has(id)?"♥":"♡"}</button>`;
+const card=(x,h)=>`<div><div style="position:relative"><div data-pd="${x.id}" style="height:${h}px;border-radius:22px;background:${g(x.g)};cursor:pointer"></div>${heart(x.id)}</div><div class="nm">${x.n}</div><div class="pr">${N(x.p)}</div></div>`;
+const head=(t,s,r)=>`<div class="row" style="margin:8px 0 16px"><div><div class="sub">${s}</div><h1>${t}</h1></div>${r||""}</div>`;
+const back=(t,to,r)=>`<div class="row" style="margin-bottom:18px"><button class="ic" data-go="${to}">‹</button><b style="font-size:18px;font-weight:500">${t}</b><span class="sub" style="min-width:40px;text-align:right">${r||""}</span></div>`;
+
+const V={
+splash:()=>{const o=[["Upgrade to what’s next.","Phones, laptops & audio, delivered across Nigeria.","Get Started"],["Every gadget you actually want","Brand-new iPhones, Galaxy, Pixel, MacBooks and audio, sealed, verified, delivered fast.","Continue"]][S.ob];
+return S.ob==0?`<div class="scr full" style="background:#111114;color:#fff;display:flex;flex-direction:column"><div style="flex:1;background:${g("#9a8f84,#3a342f")};border-radius:0 0 36px 36px;position:relative;display:grid;place-items:start center;padding-top:60px;letter-spacing:.4em;font-weight:500">ORBIT</div>
+<div style="padding:28px 24px 40px"><h1 style="font-size:32px">Upgrade to<br>what’s <span style="color:#8c93ff">next.</span></h1><p class="sub" style="margin:12px 0 22px;font-size:13px">${o[1]}</p><button class="btn lt" data-ob="1">${o[2]} →</button><div class="dots" style="color:#fff"><i class="on"></i><i></i><i></i></div></div></div>`
+:`<div class="scr full" style="padding:24px"><div style="text-align:center;letter-spacing:.4em;font-weight:500;margin-bottom:20px">ORBIT</div>
+<div class="grid2" style="height:55%">${[0,1,2,3].map(i=>`<div style="border-radius:22px;background:${g(P[[1,8,3,5][i]].g)}"></div>`).join("")}</div>
+<h1 style="text-align:center;font-size:26px;margin-top:24px">Every gadget you<br><span style="color:var(--mut)">actually want</span></h1><p class="sub" style="text-align:center;margin:10px 0 20px;font-size:13px">${o[1]}</p><button class="btn" data-go="login">${o[2]}</button><div class="dots"><i></i><i class="on"></i><i></i></div></div>`},
+login:()=>`<div class="scr" style="padding:24px"><div style="text-align:center;letter-spacing:.4em;font-weight:500;margin:10px 0 40px">ORBIT</div>
+<h1 style="font-size:34px">Welcome<br>back<span style="color:var(--acc)">.</span></h1><p class="sub" style="margin:10px 0 34px;font-size:13px">Log in to track orders and grab new drops.</p>
+<label class="in">✉<input value="amara.okafor@mail.com" aria-label="Email"></label>
+<label class="in">🔒<input id="pw" type="${S.pw?"text":"password"}" value="orbit12345" aria-label="Password"><span data-pw style="cursor:pointer">👁</span></label>
+<div class="sub" style="text-align:right;color:var(--ink);margin-bottom:18px">Forgot password?</div>
+<button class="btn" data-go="home">Log In</button><p class="sub" style="text-align:center;margin:22px 0">or continue with</p>
+<div class="grid2" style="grid-template-columns:repeat(3,1fr)">${["Google","Facebook","Apple"].map(x=>`<div class="opt" data-go="home" style="text-align:center">${x}</div>`).join("")}</div>
+<p class="sub" style="text-align:center;margin-top:60px">New to Orbit? <b style="text-decoration:underline;color:var(--ink)">Create account</b></p></div>`,
+home:()=>`<div class="scr">${head("Amara","Good morning,",`<div class="row"><button class="ic">🔔</button><button class="ic dk" data-go="bag">👜</button></div>`)}
+<label class="in" style="border-radius:28px">⌕<input placeholder="Search iPhone, Galaxy, MacBook" data-search aria-label="Search"></label>
+<div class="row" style="margin:16px 0">${["iPhone","Galaxy","Pixel","Mac","Audio"].map((c,i)=>`<div data-cat="${c}" style="text-align:center;font-size:12px;cursor:pointer"><div style="width:62px;height:62px;border-radius:50%;background:${g(CATS[i%6][2])};margin-bottom:6px"></div>${c}</div>`).join("")}</div>
+<div class="tile" data-go="spot" style="height:200px;background:${g("#ff3d8b,#7a1f4a")};cursor:pointer;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:20px"><span style="font-size:11px;letter-spacing:.2em">JUST LANDED</span><div><h1 style="font-size:26px">The new<br>iPhone range</h1><span class="pill" style="display:inline-block;margin-top:12px;color:#111">Shop now →</span></div></div>
+<div class="row" style="margin:22px 0 12px"><b style="font-size:19px;font-weight:600">Trending now</b><span class="sub" data-go="explore" style="cursor:pointer">See all</span></div>
+<div class="grid2">${[2,4].map(i=>card(prod(i),150)).join("")}</div></div>${nav()}`,
+cats:()=>`<div class="scr">${head("Categories","BROWSE",`<button class="ic" data-go="explore">⌕</button>`)}<div class="grid2">${CATS.map(([n,c,s])=>`<div class="tile" data-cat="${n.replace("Google ","").replace("MacBook","Mac")}" style="height:${n=="iPhone"||n=="Galaxy"?240:240}px;background:${g(s)};cursor:pointer;justify-content:space-between;align-items:flex-end"><div><b style="font-size:17px">${n}</b><div style="font-size:11px;opacity:.8">${c} devices</div></div><span class="ic" style="background:#fff;color:#111">→</span></div>`).join("")}</div></div>${nav()}`,
+explore:()=>{const l=P.filter(x=>S.f=="All"||x.c==S.f);return`<div class="scr">${head("Explore","DISCOVER",`<button class="ic">☰</button>`)}
+<div class="chips">${["All","iPhone","Galaxy","Pixel","Mac","Audio"].map(c=>`<span class="pill ${S.f==c?"on":""}" data-f="${c}">${c}</span>`).join("")}</div>
+<div class="masonry">${l.map((x,i)=>card(x,i%3==0?240:180)).join("")||`<p class="sub">Nothing here yet. Try another category.</p>`}</div></div>${nav()}`},
+spot:()=>`<div class="scr">${head("Spotlight","THE ORBIT EDIT",`<button class="ic" data-go="home">✕</button>`)}
+<div class="tile" style="height:380px;background:${g("#d9dde2,#8f98a3")};align-items:flex-end;padding:0"><div class="row" style="background:#fff;color:#111;margin:12px;border-radius:22px;padding:12px;width:calc(100% - 24px)"><div><b style="font-size:14px">Galaxy S23 · Cream</b><div class="sub">256GB · ${N(1150000)}</div></div><button class="ic dk" data-add="5">+</button></div></div>
+<div class="row" style="margin:22px 0 12px"><b style="font-size:19px;font-weight:600">More stories</b><span class="sub">View all</span></div>
+<div class="grid2"><div style="height:200px;border-radius:22px;background:${g("#6b5a4a,#1a1612")}"></div><div style="height:200px;border-radius:22px;background:${g("#c9d4e0,#5a6a7c")}"></div></div></div>${nav()}`,
+stores:()=>`<div class="scr">${head("Our Stores","FIND US",`<button class="ic" data-go="me">‹</button>`)}${STORES.map(([n,a,s])=>`<div class="tile" style="height:140px;background:${g(s)};margin-bottom:14px;padding:8px"><div class="row" style="background:#fff;color:#111;border-radius:18px;padding:10px 12px;width:100%"><div><b style="font-size:14px">${n}</b><div class="sub">${a}</div></div><a class="pill" style="background:#111;color:#fff" target="_blank" rel="noopener" href="https://www.google.com/maps/search/${encodeURIComponent(n+" "+a)}">Directions</a></div></div>`).join("")}</div>${nav()}`,
+pd:()=>{const x=prod(S.pid),cs=["#e5e5ea","#2b2b30","#f59e42"],pr=x.p+(S.stor=="256GB"?-150000:S.stor=="128GB"?-300000:S.stor=="1TB"?350000:0);
+return`<div class="scr full" style="background:#111114"><div style="height:360px;background:${g(x.g)};position:relative"><div class="row" style="position:absolute;top:18px;left:18px;right:18px"><button class="ic" data-go="explore">‹</button>${heart(x.id).replace("heart","heart\" style=\"position:static\" data=\"")}</div></div>
+<div style="background:var(--card);border-radius:30px 30px 0 0;margin-top:-30px;position:relative;padding:22px 20px 110px;min-height:60%">
+<div class="row" style="align-items:flex-start"><div><div class="sub">ORBIT · ${x.c.toUpperCase()}</div><h1 style="font-size:24px">${x.n}</h1></div><div style="text-align:right"><b style="font-size:19px">${N(pr)}</b><div class="sub">★ 4.9 (2.4k)</div></div></div>
+<p style="margin:18px 0 8px;font-size:13px"><b>Colour</b> <span class="sub">· ${["Silver","Black","Orange"][S.col]}</span></p><div class="row" style="justify-content:flex-start;gap:14px">${cs.map((c,i)=>`<div class="sw ${S.col==i?"on":""}" data-col="${i}" style="background:${c}"></div>`).join("")}</div>
+<div class="row" style="margin:22px 0 8px"><b style="font-size:13px">Storage</b><span class="sub" style="text-decoration:underline">Compare</span></div><div class="grid2" style="grid-template-columns:repeat(4,1fr);gap:8px">${["128GB","256GB","512GB","1TB"].map(s=>`<div class="opt ${S.stor==s?"on":""}" data-st="${s}" style="text-align:center;padding:12px 4px">${s}</div>`).join("")}</div>
+<div class="row" style="margin-top:26px"><button class="ic" style="width:54px;height:54px" data-sv="${x.id}">${S.saved.has(x.id)?"♥":"♡"}</button><button class="btn" data-add="${x.id}">Add to Bag · ${N(pr)}</button></div></div></div>`},
+saved:()=>`<div class="scr">${head("Saved",S.saved.size+" PIECES",`<button class="ic">⌕</button>`)}<div class="masonry">${[...S.saved].map((id,i)=>card(prod(id),i%3==0?210:150)).join("")||`<p class="sub">Nothing saved yet. Tap ♡ on any gadget.</p>`}</div></div>${nav()}`,
+bag:()=>`<div class="scr">${back("My Bag","home",count()+" items")}${items().map(k=>{const x=prod(k);return`<div class="card item"><div class="thumb" style="background:${g(x.g)}"></div><div style="flex:1"><b style="font-size:14px">${x.n}</b><div class="sub">${x.c}</div><div class="row" style="margin-top:8px"><b style="font-size:14px">${N(x.p)}</b><div class="qty"><button data-q="${k}:-1">−</button>${S.cart[k]}<button data-q="${k}:1">+</button></div></div></div></div>`}).join("")||`<p class="sub" style="margin:40px 0;text-align:center">Your bag is empty. Find something you like in Explore.</p>`}
+${count()?`<div class="row" style="border:1.5px dashed var(--line);border-radius:18px;padding:14px;margin:6px 0 18px;font-size:13px"><span class="sub">🏷 Promo code</span><b>ORBIT10</b></div>
+<div class="sum"><div><span>Subtotal</span><span>${N(sub())}</span></div><div><span>Delivery</span><span>${N(del())}</span></div><div style="color:var(--grn)"><span>Discount (10%)</span><span>−${N(disc())}</span></div><div style="color:var(--ink);font-size:19px;font-weight:600;border-top:1px solid var(--line);padding-top:14px"><span>Total</span><span>${N(total())}</span></div></div>
+<button class="btn" data-go="checkout" style="margin-top:20px">Checkout →</button>`:""}</div>${nav()}`,
+checkout:()=>`<div class="scr">${back("Checkout","bag")}<div class="lbl">DELIVERY ADDRESS</div><div class="card row"><div><b style="font-size:14px">Home</b><div class="sub">12 Admiralty Way, Lekki Phase 1, Lagos</div></div><b style="text-decoration:underline;font-size:12px">Edit</b></div>
+<div class="lbl">DELIVERY</div><div class="grid2">${[["std","Standard","2–3 days · ₦8,500"],["exp","Express","Same day · ₦15,000"]].map(([k,t,d])=>`<div class="opt ${S.ship==k?"on":""}" data-sh="${k}"><div style="font-size:18px">${k=="std"?"🚚":"⏱"}</div><b style="display:block;margin-top:8px">${t}</b><span class="sub">${d}</span></div>`).join("")}</div>
+<div class="lbl">PAYMENT</div>${[["visa","VISA  •••• •••• •••• 4417","Expires 08/28"],["bank","Bank Transfer",""]].map(([k,t,d])=>`<div class="opt row ${S.pay==k?"on":""}" data-pay="${k}" style="margin-bottom:10px"><div><b>${t}</b><div class="sub">${d}</div></div><span>${S.pay==k?"✔":"○"}</span></div>`).join("")}
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:28px 28px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))" class="row"><div><div class="sub">Total (${count()} items)</div><b style="font-size:22px">${N(total())}</b></div><button class="btn" data-go="done" style="width:170px">Place Order</button></div></div>`,
+done:()=>`<div class="scr" style="padding:0 24px"><div style="text-align:center;padding-top:90px"><div style="width:150px;height:150px;border-radius:50%;background:#c9ccf5;margin:0 auto 34px;display:grid;place-items:center"><div style="width:122px;height:122px;border-radius:50%;background:#111114;color:#fff;font-size:54px;display:grid;place-items:center">✓</div></div><h1>Thank you, Amara</h1><p class="sub" style="margin-top:8px;font-size:13px">Your order is confirmed and being packed with care.</p></div>
+<div class="card" style="margin-top:36px"><div class="row"><div><div class="sub">Order number</div><b>#ORB-20481</b></div><div style="text-align:right"><div class="sub">Total</div><b>${N(S.last||0)}</b></div></div><div style="border-top:1px solid var(--line);margin:12px 0"></div><div class="sub">Estimated delivery</div><b style="font-size:14px">${S.ship=="exp"?"Today, by 9 PM":"Thursday, 2 – 5 PM"}</b></div>
+<button class="btn" style="margin-top:50px">Track Order</button><p data-go="home" style="text-align:center;margin-top:18px;font-size:14px;cursor:pointer">Continue shopping</p></div>`,
+me:()=>`<div class="scr"><div style="text-align:center"><div style="width:84px;height:84px;border-radius:50%;background:var(--card);border:1px solid var(--line);margin:0 auto 10px;display:grid;place-items:center;font-size:32px;font-weight:600">A</div><b style="font-size:20px">Amara Okafor</b><div class="sub">Orbit Member · Lagos</div></div>
+<div class="card row" style="margin:18px 0;text-align:center;border-radius:26px">${[[8,"Orders"],[S.saved.size,"Saved"],[420,"Points"]].map(([n,l])=>`<div style="flex:1"><b style="font-size:19px">${n}</b><div class="sub">${l}</div></div>`).join("")}</div>
+<div class="row"><b style="font-size:17px;font-weight:600">My setup</b><span class="sub">Edit</span></div><div class="row" style="margin:12px 0 8px">${[4,6,9,8,10].map(i=>`<div style="flex:1;height:100px;border-radius:16px;background:${g(prod(i).g)}"></div>`).join("")}</div>
+${[["📦","My Orders"],["📍","Saved Addresses","stores"],["💳","Payment Methods"],["🎁","Trade-in & Gift Cards"],["🔔","Notifications"],["❔","Help & Support"]].map(([i,t,to])=>`<div class="menu" ${to?`data-go="${to}"`:""}><span class="ic" style="border-radius:12px">${i}</span><span style="flex:1">${t==="Saved Addresses"?"Find a store":t}</span><span class="sub">›</span></div>`).join("")}</div>${nav()}`};
+
+function render(){const a=$("app");a.innerHTML=S.v=="pd"?V.pd():V[S.v]();const s=a.querySelector(".scr");if(s&&S.keep!=null){s.scrollTop=S.keep;S.keep=null}}
+function go(v){S.v=v;render()}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-go],[data-ob],[data-sv],[data-pd],[data-add],[data-f],[data-cat],[data-q],[data-col],[data-st],[data-sh],[data-pay],[data-pw]");if(!t)return;const d=t.dataset,sc=document.querySelector(".scr");
+if(d.sv){const i=+d.sv;S.saved.has(i)?S.saved.delete(i):S.saved.add(i);S.keep=sc&&sc.scrollTop;render();return}
+if(d.ob){S.ob=+d.ob;render();return}
+if(d.pd){S.pid=+d.pd;S.stor="512GB";S.col=0;go("pd");return}
+if(d.add){S.cart[d.add]=(S.cart[d.add]||0)+1;go("bag");return}
+if(d.f){S.f=d.f;render();return}
+if(d.cat){S.f=d.cat;go("explore");return}
+if(d.q){const[k,n]=d.q.split(":");S.cart[k]=Math.max(0,S.cart[k]+ +n);if(!S.cart[k])delete S.cart[k];render();return}
+if(d.col){S.col=+d.col;S.keep=sc.scrollTop;render();return}
+if(d.st){S.stor=d.st;S.keep=sc.scrollTop;render();return}
+if(d.sh){S.ship=d.sh;S.keep=sc.scrollTop;render();return}
+if(d.pay){S.pay=d.pay;S.keep=sc.scrollTop;render();return}
+if(d.pw!==undefined){S.pw=!S.pw;render();return}
+if(d.go=="done"){S.last=total();S.cart={}}
+if(d.go=="login"||d.go=="home"||d.go)go(d.go)});
+render();
+</script></body></html>
