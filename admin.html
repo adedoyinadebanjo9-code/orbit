@@ -168,17 +168,44 @@ async function editor(row){
    vs=a.data;ims=b.data
   }
   const vr=v=>`<tr data-v="${v?v.id:""}"><td><input class="vc" value="${esc(v&&v.color)}" placeholder="Colour"></td><td><input class="vs" value="${esc(v&&v.storage)}" placeholder="Storage"></td><td><input class="vp" type="number" min="0" step="0.01" value="${v?v.price_kobo/100:""}" placeholder="Price ₦"></td><td><input class="vk" type="number" min="0" step="1" value="${v?v.stock:0}"></td><td><input class="va" type="checkbox" ${!v||v.active?"checked":""}></td><td><button type="button" class="ghost" data-act="sv">${v?"Save":"Add"}</button>${v?` <button type="button" class="danger" data-act="dv">Delete</button>`:""}</td></tr>`;
-  d.innerHTML=`<form id="pf"><h3 style="margin:0">${p?"Edit":"Add"} product</h3>${T.products.f.map(f=>field(f,p,"id",!!p)).join("")}<div class="acts">${p?`<button type="button" class="danger" data-act="dp">Delete product</button>`:""}<button type="button" class="ghost" data-act="cx">${p?"Close":"Cancel"}</button><button>${p?"Save details":"Create, then add variants and photos"}</button></div></form>`
+  const extra=`<h4>First variant</h4><p class="mut">Optional. You can add more variants after saving.</p><div class="sc"><table class="vt"><tr><th>Colour</th><th>Storage</th><th>Price (₦)</th><th>Stock</th></tr><tr><td><input id="n_c" placeholder="Colour"></td><td><input id="n_s" placeholder="Storage"></td><td><input id="n_p" type="number" min="0" step="0.01" placeholder="Price ₦"></td><td><input id="n_k" type="number" min="0" step="1" value="1"></td></tr></table></div><h4>Photos</h4><p class="mut">JPEG, PNG or WebP, up to 5 MB each. Pick them here and they upload when you tap Create product.</p><input id="n_up" type="file" accept="image/jpeg,image/png,image/webp" multiple>`;
+  d.innerHTML=`<form id="pf"><h3 style="margin:0">${p?"Edit":"Add"} product</h3>${T.products.f.map(f=>field(f,p,"id",!!p)).join("")}${p?"":extra}<div class="acts">${p?`<button type="button" class="danger" data-act="dp">Delete product</button>`:""}<button type="button" class="ghost" data-act="cx">${p?"Close":"Cancel"}</button><button>${p?"Save details":"Create product"}</button></div></form>`
   +(p?`<h4>Variants, prices and stock</h4><p class="mut">One row per colour and storage option. Leave colour or storage empty if the product has none. Untick Active to hide a variant without deleting it.</p><div class="sc"><table class="vt"><tr><th>Colour</th><th>Storage</th><th>Price (₦)</th><th>Stock</th><th>Active</th><th></th></tr>${vs.map(vr).join("")}${vr(null)}</table></div>
-  <h4>Photos</h4><p class="mut">JPEG, PNG or WebP, up to 5 MB each. The photo with the lowest number is shown first.</p><div class="pics">${ims.map(i=>`<div class="ph"><img src="${esc(pub(i.path))}" alt=""><input class="so" type="number" step="1" value="${i.sort??0}" data-id="${i.id}" aria-label="Photo order"><button type="button" class="ghost" data-act="di" data-id="${i.id}" data-path="${esc(i.path)}">Remove</button></div>`).join("")}</div><label for="up">Add photos</label><input id="up" type="file" accept="image/jpeg,image/png,image/webp" multiple>`:`<p class="mut">After you create the product you can add its variants, prices, stock and photos here.</p>`);
+  <h4>Photos</h4><p class="mut">JPEG, PNG or WebP, up to 5 MB each. The photo with the lowest number is shown first.</p><div class="pics">${ims.map(i=>`<div class="ph"><img src="${esc(pub(i.path))}" alt=""><input class="so" type="number" step="1" value="${i.sort??0}" data-id="${i.id}" aria-label="Photo order"><button type="button" class="ghost" data-act="di" data-id="${i.id}" data-path="${esc(i.path)}">Remove</button></div>`).join("")}</div><label for="up">Add photos</label><input id="up" type="file" accept="image/jpeg,image/png,image/webp" multiple>`:"");
   if(!d.open)d.showModal()
+ }
+async function uploadPhotos(files,start){
+  let n=0,next=start;
+  for(const file of files){
+   if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast(file.name+" is not JPEG, PNG or WebP",1);continue}
+   if(file.size>5*1024*1024){toast(file.name+" is over 5 MB",1);continue}
+   const path=`${p.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+   const up=await sb.storage.from("products").upload(path,file,{contentType:file.type});
+   if(up.error){toast("Photo upload failed: "+up.error.message,1);continue}
+   const ins=await sb.from("product_images").insert({product_id:p.id,path,sort:next++});
+   if(ins.error){toast("Photo not saved: "+ins.error.message,1);await sb.storage.from("products").remove([path]);continue}
+   n++
+  }
+  return n
  }
  d.onsubmit=async e=>{
   e.preventDefault();
+  const creating=!p;let bad=false;
   const o={name:$("#f_name").value.trim(),category_id:$("#f_category_id").value,description:$("#f_description").value.trim()||null,active:$("#f_active").checked};
   const{data,error}=await(p?sb.from("products").update(o).eq("id",p.id):sb.from("products").insert(o)).select().single();
-  if(error)return toast(error.message,1);
-  p=data;toast("Saved");draw()
+  if(error)return toast("Product not saved: "+error.message,1);
+  p=data;
+  if(creating){
+   const price=parseFloat($("#n_p").value);
+   if(!isNaN(price)&&price>=0){
+    const v=await sb.from("product_variants").insert({product_id:p.id,color:$("#n_c").value.trim()||null,storage:$("#n_s").value.trim()||null,price_kobo:Math.round(price*100),stock:Math.max(0,Math.trunc(Number($("#n_k").value)||0)),active:true});
+    if(v.error){bad=true;toast("Product saved, but the variant failed: "+v.error.message,1)}
+   }
+   const files=[...$("#n_up").files];
+   if(files.length){const n=await uploadPhotos(files,0);if(n<files.length)bad=true}
+  }
+  if(!bad)toast("Saved");
+  draw()
  };
  d.onclick=async e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
@@ -217,19 +244,9 @@ async function editor(row){
    return error?toast(error.message,1):toast("Order saved")
   }
   if(t.id=="up"){
-   const files=[...t.files];let n=0;
+   const files=[...t.files];
    const{data:last}=await sb.from("product_images").select("sort").eq("product_id",p.id).order("sort",{ascending:false}).limit(1);
-   let next=last&&last.length?(last[0].sort||0)+1:0;
-   for(const file of files){
-    if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast(file.name+" is not JPEG, PNG or WebP",1);continue}
-    if(file.size>5*1024*1024){toast(file.name+" is over 5 MB",1);continue}
-    const path=`${p.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
-    const up=await sb.storage.from("products").upload(path,file,{contentType:file.type});
-    if(up.error){toast(up.error.message,1);continue}
-    const ins=await sb.from("product_images").insert({product_id:p.id,path,sort:next++});
-    if(ins.error){toast(ins.error.message,1);await sb.storage.from("products").remove([path]);continue}
-    n++
-   }
+   const n=await uploadPhotos(files,last&&last.length?(last[0].sort||0)+1:0);
    if(n)toast(n+" photo"+(n>1?"s":"")+" added");
    draw()
   }
